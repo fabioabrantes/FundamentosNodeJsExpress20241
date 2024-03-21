@@ -2,7 +2,7 @@ import express from 'express';
 import { v4 as uuid } from 'uuid';
 
 type TransactionType = {
-  type: string;
+  tipo: string;
   id: string;
   amount: number; //amount
   date: Date;
@@ -47,11 +47,11 @@ server.get('/users', (request, response) => {
   response.status(200).json(clients);
 });
 
-type ParamsType = {
+type ParamsTypeUser = {
   id: string;
 };
 server.delete('/users/:id', (request, response) => {
-  const { id } = request.params as ParamsType;
+  const { id } = request.params as ParamsTypeUser;
   //validar o id
   const index = clients.findIndex(client => client.id === id);
   if (index < 0) {
@@ -83,13 +83,14 @@ server.put('/users/:id', (request, response) => {
 
 // CRUD da tabela Transactions
 type BodyTypeTransactions = {
-  type: string;
+  tipo: string;
   amount: number;
 };
 
-server.post('/transactions', (request, response) => {
-  const { type, amount } = request.body as BodyTypeTransactions;
-  const { id } = request.headers;
+server.post('/client/transactions', (request, response) => {
+ 
+  const { id, tipo, amount } = request.headers;
+
   const client = clients.find(client => client.id === id);
 
   if (!client) {
@@ -97,11 +98,11 @@ server.post('/transactions', (request, response) => {
   }
   const transaction = {
     id: uuid(),
-    type,
-    amount,
+    tipo:String(tipo),
+    amount: Number(amount),
     date: new Date()
   }
-  console.log(transaction);
+
   client.transactions.push(transaction);
 
   return response.status(201).json({
@@ -110,42 +111,47 @@ server.post('/transactions', (request, response) => {
   });
 });
 
-server.get('/users', (request, response) => {
-  response.status(200).json(clients);
+server.get('/client/:id/transactions', (request, response) => {
+  const {id} = request.params;
+  const client = clients.find(client => client.id === id);
+
+  if (!client) {
+    return response.status(400).json({ message: "error: cliente não existe no banco de dados" });
+  }
+  
+  response.status(200).json(client.transactions);
 });
+
+type BodyTransactions = {
+  novotipo:string;
+  novoAmount: number;
+};
+
+server.put('/client/:idClient/transactions/:idTransaction', (request,response)=>{
+  const {idTransaction, idClient} = request.params;
+  const client = clients.find(client => client.id === idClient);
+  const {novotipo,novoAmount} = request.body as BodyTransactions;
+
+  if (!client) {
+    return response.status(400).json({ message: "error: cliente não existe no banco de dados" });
+  }
+  const transaction = client.transactions.find(item => item.id === idTransaction);
+
+  if (!transaction) {
+    return response.status(400).json({ message: "error: transacao não existe no banco de dados" });
+  }
+
+  transaction.tipo = novotipo;
+  transaction.amount = novoAmount;
+
+  return response.status(200).json({message:" edição realaizada com sucesso da transação"})
+})
 
 type ParamsType = {
   id: string;
 };
-server.delete('/users/:id', (request, response) => {
-  const { id } = request.params as ParamsType;
-  //validar o id
-  const index = clients.findIndex(client => client.id === id);
-  if (index < 0) {
-    return response.status(400).json({ message: "error: cliente não existe no banco de dados" });
-  }
-  clients.splice(index, 1);
-  return response.status(200).json({ message: "usuario removido com sucesso" });
+server.delete('/client/:idClient/transactions/:idTransaction', (request, response) => {
 
-});
-
-server.put('/users/:id', (request, response) => {
-  const { id } = request.params as ParamsType;
-  const { cpf, name } = request.body as BodyType;
-  //validar o id
-  const index = clients.findIndex(client => client.id === id);
-  if (index < 0) {
-    return response.status(400).json({ message: "error: cliente não existe no banco de dados" });
-  }
-  clients[index] = {
-    id,
-    cpf,
-    name,
-    transactions: clients[index].transactions
-  }
-  return response.status(200).json(
-    { message: "alterado com sucesso", client: clients[index] }
-  );
 });
 
 
